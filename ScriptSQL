@@ -1,0 +1,211 @@
+USE ROLE ACCOUNTADMIN;
+
+CREATE WAREHOUSE IF NOT EXISTS WH_XS
+  WAREHOUSE_SIZE = 'XSMALL'
+  AUTO_SUSPEND = 60
+  AUTO_RESUME = TRUE
+  INITIALLY_SUSPENDED = TRUE;
+
+CREATE DATABASE IF NOT EXISTS OLIST_DB;
+CREATE SCHEMA IF NOT EXISTS OLIST_DB.RAW;
+CREATE SCHEMA IF NOT EXISTS OLIST_DB.MART;
+
+USE WAREHOUSE WH_XS;
+USE DATABASE OLIST_DB;
+USE SCHEMA RAW;
+
+
+CREATE OR REPLACE TABLE ORDERS (
+  order_id VARCHAR, customer_id VARCHAR, order_status VARCHAR,
+  order_purchase_timestamp VARCHAR, order_approved_at VARCHAR,
+  order_delivered_carrier_date VARCHAR, order_delivered_customer_date VARCHAR,
+  order_estimated_delivery_date VARCHAR
+);
+
+CREATE OR REPLACE TABLE ORDER_ITEMS (
+  order_id VARCHAR, order_item_id VARCHAR, product_id VARCHAR, seller_id VARCHAR,
+  shipping_limit_date VARCHAR, price VARCHAR, freight_value VARCHAR
+);
+
+CREATE OR REPLACE TABLE CUSTOMERS (
+  customer_id VARCHAR, customer_unique_id VARCHAR,
+  customer_zip_code_prefix VARCHAR, customer_city VARCHAR, customer_state VARCHAR
+);
+
+CREATE OR REPLACE TABLE PRODUCTS (
+  product_id VARCHAR, product_category_name VARCHAR, product_name_lenght VARCHAR,
+  product_description_lenght VARCHAR, product_photos_qty VARCHAR, product_weight_g VARCHAR,
+  product_length_cm VARCHAR, product_height_cm VARCHAR, product_width_cm VARCHAR
+);
+
+CREATE OR REPLACE TABLE SELLERS (
+  seller_id VARCHAR, seller_zip_code_prefix VARCHAR, seller_city VARCHAR, seller_state VARCHAR
+);
+
+CREATE OR REPLACE TABLE ORDER_REVIEWS (
+  review_id VARCHAR, order_id VARCHAR, review_score VARCHAR,
+  review_comment_title VARCHAR, review_comment_message VARCHAR,
+  review_creation_date VARCHAR, review_answer_timestamp VARCHAR
+);
+
+CREATE OR REPLACE TABLE ORDER_PAYMENTS (
+  order_id VARCHAR, payment_sequential VARCHAR, payment_type VARCHAR,
+  payment_installments VARCHAR, payment_value VARCHAR
+);
+
+CREATE OR REPLACE TABLE CATEGORY_TRANSLATION (
+  product_category_name VARCHAR, product_category_name_english VARCHAR
+);
+
+SELECT 'ORDERS' AS t, COUNT(*) AS nb FROM RAW.ORDERS UNION ALL "99441"
+SELECT 'ORDER_ITEMS', COUNT(*) FROM RAW.ORDER_ITEMS UNION ALL "112650"
+SELECT 'CUSTOMERS', COUNT(*) FROM RAW.CUSTOMERS UNION ALL "99441"
+SELECT 'PRODUCTS', COUNT(*) FROM RAW.PRODUCTS UNION ALL "32951"
+SELECT 'SELLERS', COUNT(*) FROM RAW.SELLERS UNION ALL "3095"
+SELECT 'ORDER_REVIEWS', COUNT(*) FROM RAW.ORDER_REVIEWS UNION ALL "99224"
+SELECT 'ORDER_PAYMENTS', COUNT(*) FROM RAW.ORDER_PAYMENTS UNION ALL "103886"
+SELECT 'CATEGORY_TRANSLATION', COUNT(*) FROM RAW.CATEGORY_TRANSLATION; "72"
+
+USE SCHEMA OLIST_DB.MART;
+"
+-------------------------------------------Table dimension-------------------------------------------------
+"
+CREATE OR REPLACE TABLE DIM_CUSTOMER AS
+SELECT
+  customer_id,
+  customer_unique_id,
+  customer_city,
+  UPPER(customer_state) AS customer_state
+FROM OLIST_DB.RAW.CUSTOMERS;
+
+CREATE OR REPLACE TABLE DIM_SELLER AS
+SELECT
+  seller_id,
+  seller_city,
+  UPPER(seller_state) AS seller_state
+FROM OLIST_DB.RAW.SELLERS;
+
+CREATE OR REPLACE TABLE DIM_PRODUCT AS
+SELECT
+  p.product_id,
+  COALESCE(t.product_category_name_english, p.product_category_name, 'unknown') AS category_name,
+  TRY_TO_NUMBER(p.product_weight_g) AS weight_g,
+  TRY_TO_NUMBER(p.product_photos_qty) AS photos_qty
+FROM OLIST_DB.RAW.PRODUCTS p
+LEFT JOIN OLIST_DB.RAW.CATEGORY_TRANSLATION t
+  ON p.product_category_name = t.product_category_name;
+
+"
+-------------------------------------------Table de faits-------------------------------------------------
+"
+CREATE OR REPLACE TABLE FACT_ORDERS AS
+WITH reviews AS (
+  SELECT
+    order_id,
+    AVG(TRY_TO_NUMBER(review_score)) AS review_score
+  FROM OLIST_DB.RAW.ORDER_REVIEWS
+  GROUP BY order_id
+),
+orders AS (
+  SELECT
+    order_id,
+    customer_id,
+    order_status,
+    TRY_TO_TIMESTAMP(order_purchase_timestamp)       AS purchase_ts,
+    TRY_TO_TIMESTAMP(order_delivered_customer_date)  AS delivered_ts,
+    TRY_TO_TIMESTAMP(order_estimated_delivery_date)  AS estimated_ts
+  FROM OLIST_DB.RAW.ORDERS
+)
+SELECT
+  i.order_id,
+  TRY_TO_NUMBER(i.order_item_id)                    AS order_item_id,
+  o.customer_id,
+  i.product_id,
+  i.seller_id,
+  o.order_status,
+  o.purchase_ts,
+  DATE(o.purchase_ts)                               AS purchase_date,
+  o.delivered_ts,
+  o.estimated_ts,
+  TRY_TO_DECIMAL(i.price, 10, 2)                    AS price,
+  TRY_TO_DECIMAL(i.freight_value, 10, 2)            AS freight_value,
+  TRY_TO_DECIMAL(i.price, 10, 2)
+    + TRY_TO_DECIMAL(i.freight_value, 10, 2)        AS total_amount,
+  DATEDIFF('day', o.purchase_ts, o.delivered_ts)    AS delivery_days,
+  DATEDIFF('day', o.estimated_ts, o.delivered_ts)   AS delay_days,
+  CASE
+    WHEN o.delivered_ts IS NULL THEN NULL
+    WHEN o.delivered_ts > o.estimated_ts THEN 1
+    ELSE 0
+  END                                               AS is_late,
+  r.review_score
+FROM OLIST_DB.RAW.ORDER_ITEMS i
+JOIN orders o       ON i.order_id = o.order_id
+LEFT JOIN reviews r ON i.order_id = r.order_id;
+
+"SELECT * FROM FACT_ORDERS LIMIT 10;
+SELECT COUNT(*) FROM FACT_ORDERS;   -- doit être égal au nombre de lignes de RAW.ORDER_ITEMS : 112650 = 112650 GOOD"
+
+"
+---------------------------------------Data Quality Check-------------------------------------
+"
+-- 1. Pas de perte de lignes entre RAW et MART 112650 = 112650
+SELECT
+  (SELECT COUNT(*) FROM OLIST_DB.RAW.ORDER_ITEMS) AS raw_items,
+  (SELECT COUNT(*) FROM OLIST_DB.MART.FACT_ORDERS) AS fact_rows;
+
+-- 2. Unicité de la clé de la fact (doit retourner 0 ligne) 0 lignes
+SELECT order_id, order_item_id, COUNT(*) AS n
+FROM OLIST_DB.MART.FACT_ORDERS
+GROUP BY 1, 2 HAVING COUNT(*) > 1;
+
+-- 3. Unicité des clés des dimensions (chacune doit retourner 0 ligne) 0 et 0 et 0
+SELECT customer_id, COUNT(*) FROM OLIST_DB.MART.DIM_CUSTOMER GROUP BY 1 HAVING COUNT(*) > 1;
+SELECT product_id,  COUNT(*) FROM OLIST_DB.MART.DIM_PRODUCT  GROUP BY 1 HAVING COUNT(*) > 1;
+SELECT seller_id,   COUNT(*) FROM OLIST_DB.MART.DIM_SELLER   GROUP BY 1 HAVING COUNT(*) > 1;
+
+-- 4. Intégrité référentielle : faits sans dimension correspondante (doit retourner 0) 0 et 0 et 0
+SELECT COUNT(*) AS orphan_customers FROM OLIST_DB.MART.FACT_ORDERS f
+LEFT JOIN OLIST_DB.MART.DIM_CUSTOMER d ON f.customer_id = d.customer_id WHERE d.customer_id IS NULL;
+SELECT COUNT(*) AS orphan_products FROM OLIST_DB.MART.FACT_ORDERS f
+LEFT JOIN OLIST_DB.MART.DIM_PRODUCT d ON f.product_id = d.product_id WHERE d.product_id IS NULL;
+SELECT COUNT(*) AS orphan_sellers FROM OLIST_DB.MART.FACT_ORDERS f
+LEFT JOIN OLIST_DB.MART.DIM_SELLER d ON f.seller_id = d.seller_id WHERE d.seller_id IS NULL;
+
+-- 5. Taux de valeurs nulles sur les colonnes clés 
+SELECT
+  COUNT_IF(purchase_ts IS NULL)  AS null_purchase_ts,  --0
+  COUNT_IF(price IS NULL)        AS null_price,  --0
+  COUNT_IF(review_score IS NULL) AS null_review, --0
+  COUNT_IF(delivered_ts IS NULL) AS not_delivered  --2454
+FROM OLIST_DB.MART.FACT_ORDERS;
+
+SELECT
+  is_late,
+  COUNT(*) AS nb_lignes,
+  ROUND(AVG(review_score), 2) AS note_moyenne
+FROM OLIST_DB.MART.FACT_ORDERS
+WHERE is_late IS NOT NULL
+GROUP BY is_late;
+-----On constate note moyenne de review plus basse quand c'est en retard (2,55 VS 4,21), c'est cohérent
+
+"
+-------------------------------------------Créer Role pour PowerBI--------------------------------------
+"
+USE ROLE ACCOUNTADMIN;
+
+CREATE ROLE IF NOT EXISTS POWERBI_ROLE;
+
+GRANT USAGE ON WAREHOUSE WH_XS TO ROLE POWERBI_ROLE;
+GRANT USAGE ON DATABASE OLIST_DB TO ROLE POWERBI_ROLE;
+GRANT USAGE ON SCHEMA OLIST_DB.MART TO ROLE POWERBI_ROLE;
+GRANT SELECT ON ALL TABLES IN SCHEMA OLIST_DB.MART TO ROLE POWERBI_ROLE;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA OLIST_DB.MART TO ROLE POWERBI_ROLE;
+
+-- Pour pouvoir tester ce rôle avec ton propre utilisateur
+GRANT ROLE POWERBI_ROLE TO USER MAXENCE;
+
+USE ROLE POWERBI_ROLE;
+SELECT COUNT(*) FROM OLIST_DB.MART.FACT_ORDERS;   -- doit fonctionner oui
+SELECT COUNT(*) FROM OLIST_DB.RAW.ORDERS;         -- doit échouer (accès refusé) oui
+USE ROLE ACCOUNTADMIN;

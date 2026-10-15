@@ -47,3 +47,6 @@ C’est une question de sécurité et de propreté : Power BI n’accède qu’�
 En une phrase : RAW = ce qu’on reçoit, MART = ce qu’on livre.
 
 Dans le monde professionnel, tu entendras aussi les termes Bronze / Silver / Gold (architecture médaillon). RAW correspond à Bronze et MART à Gold. On a sauté la couche Silver (nettoyage intermédiaire) pour tenir en 2 jours, en faisant le nettoyage directement dans les requêtes qui créent MART.
+
+<img width="996" height="708" alt="image" src="https://github.com/user-attachments/assets/9157e218-2aea-44e2-89aa-fb15ce666048" />
+

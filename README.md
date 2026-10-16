@@ -1,5 +1,51 @@
 # snowflake-powerbi-olist-
 Projet snowflake powerbi avec la database olist
+Kaggle (CSV Olist) → Snowflake [Stage/Upload] → RAW (8 tables) → MART (1 fact + 3 dims) → Power BI (modèle + 2 pages)
+
+# Olist : Pipeline Snowflake et dashboard Power BI
+
+## Contexte et problématique
+Comment la qualité de livraison impacte-t-elle la satisfaction client et la performance
+commerciale d'une marketplace e-commerce ?
+
+## Données
+Dataset public Olist (Kaggle), ~100 000 commandes, 2016 à 2018.
+
+## Architecture
+<img width="1890" height="723" alt="image" src="https://github.com/user-attachments/assets/e80970fb-29bc-42e9-b201-142febb497cc" />
+
+
+## Étapes réalisées
+1. Chargement des CSV dans Snowflake (couche RAW, 8 tables, tout en VARCHAR)
+2. Transformation SQL (couche MART : FACT_ORDERS + 3 dimensions)
+3. Contrôles qualité (comptages, unicité, intégrité référentielle)
+4. Rôle dédié lecture seule pour Power BI
+5. Modèle en étoile et mesures DAX dans Power BI
+6. Dashboard de 2 pages
+
+## Résultats clés
+- (Ex.) Taux de retard global : X %
+- (Ex.) Note moyenne : X en retard vs Y à l'heure
+- (Ex.) État avec le plus fort taux de retard : ...
+
+## Captures
+![Page 1](images/page1.png)
+![Page 2](images/page2.png)
+
+## Choix techniques et hypothèses
+- Grain de la fact : un article commandé
+- Avis agrégés par commande (moyenne) pour éviter les doublons
+- Commandes annulées : [ta décision]
+
+## Limites et évolutions possibles
+- Chargement incrémental (Streams et Tasks), orchestration
+- Transformations avec dbt (tests automatisés)
+- Ajout de la géolocalisation (distance vendeur-client)
+- Utilisateur de service dédié pour Power BI
+- Passage en DirectQuery ou actualisation planifiée
+
+
+
 Ordres de grandeur attendus : ORDERS ≈ 99 441, ORDER_ITEMS ≈ 112 650, CUSTOMERS ≈ 99 441, PRODUCTS ≈ 32 951, SELLERS ≈ 3 095, ORDER_REVIEWS ≈ 99 224 (peut varier selon les retours à la ligne), ORDER_PAYMENTS ≈ 103 886, CATEGORY_TRANSLATION ≈ 71.
 
 Pense à noter ces chiffres pour ton README.

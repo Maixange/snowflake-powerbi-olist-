@@ -1,7 +1,3 @@
-# snowflake-powerbi-olist-
-Projet snowflake powerbi avec la database olist
-Kaggle (CSV Olist) → Snowflake [Stage/Upload] → RAW (8 tables) → MART (1 fact + 3 dims) → Power BI (modèle + 2 pages)
-
 # Olist : Pipeline Snowflake et dashboard Power BI
 
 ## Contexte et problématique
@@ -14,6 +10,8 @@ Ce qui peut être trompeur : 2016 et 2018 sont des années incomplètes, à l'in
 
 ## Architecture
 <img width="1890" height="723" alt="image" src="https://github.com/user-attachments/assets/fc1f8d23-6544-4fc1-be20-20c1630350b7" />
+
+Kaggle (CSV Olist) → Snowflake [Stage/Upload] → RAW (8 tables) → MART (1 fact + 3 dims) → Power BI (modèle + 2 pages)
 
 
 

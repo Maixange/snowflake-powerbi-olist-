@@ -45,7 +45,3 @@ Kaggle (CSV Olist) → Snowflake [Stage/Upload] → RAW (8 tables) → MART (1 f
 - Ajout de la géolocalisation (distance vendeur-client)
 - Utilisateur de service dédié pour Power BI
 - Passage en DirectQuery ou actualisation planifiée
-
-
-
-Ordres de grandeur attendus : ORDERS ≈ 99 441, ORDER_ITEMS ≈ 112 650, CUSTOMERS ≈ 99 441, PRODUCTS ≈ 32 951, SELLERS ≈ 3 095, ORDER_REVIEWS ≈ 99 224 (peut varier selon les retours à la ligne), ORDER_PAYMENTS ≈ 103 886, CATEGORY_TRANSLATION ≈ 71.

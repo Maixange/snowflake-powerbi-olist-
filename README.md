@@ -13,7 +13,8 @@ Dataset public Olist (Kaggle), ~100 000 commandes, 2016 à 2018.
 Ce qui peut être trompeur : 2016 et 2018 sont des années incomplètes, à l'inverse de 2017.
 
 ## Architecture
-<img width="1890" height="723" alt="image" src="https://github.com/user-attachments/assets/e80970fb-29bc-42e9-b201-142febb497cc" />
+<img width="1890" height="723" alt="image" src="https://github.com/user-attachments/assets/fc1f8d23-6544-4fc1-be20-20c1630350b7" />
+
 
 
 ## Étapes réalisées

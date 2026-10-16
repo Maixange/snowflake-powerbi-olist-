@@ -37,7 +37,8 @@ Kaggle (CSV Olist) → Snowflake [Stage/Upload] → RAW (8 tables) → MART (1 f
 ## Choix techniques et hypothèses
 - Grain de la fact : un article commandé
 - Avis agrégés par commande (moyenne) pour éviter les doublons
-- Commandes annulées : [ta décision]
+- Commandes annulées : Pas considéré
+- Warehouse XSMALL avec AUTO_SUSPEND = 60 s
 
 ## Limites et évolutions possibles
 - Chargement incrémental (Streams et Tasks), orchestration

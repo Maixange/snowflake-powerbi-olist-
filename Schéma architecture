@@ -1,1 +1,0 @@
-Kaggle (CSV Olist) → Snowflake [Stage/Upload] → RAW (8 tables) → MART (1 fact + 3 dims) → Power BI (modèle + 2 pages)

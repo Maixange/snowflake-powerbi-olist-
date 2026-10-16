@@ -39,6 +39,7 @@ Kaggle (CSV Olist) → Snowflake [Stage/Upload] → RAW (8 tables) → MART (1 f
 - Avis agrégés par commande (moyenne) pour éviter les doublons
 - Commandes annulées : Pas considéré
 - Warehouse XSMALL avec AUTO_SUSPEND = 60 s
+- DirectQuery pas utilisé car les données sont figées, donc ce sera plus fluide
 
 ## Limites et évolutions possibles
 - Chargement incrémental (Streams et Tasks), orchestration

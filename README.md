@@ -29,8 +29,8 @@ Kaggle (CSV Olist) → Snowflake [Stage/Upload] → RAW (8 tables) → MART (1 f
 - État avec le plus fort taux de retard : AL (modifier pour avoir les noms complets
 
 ## Captures
-<img width="1371" height="767" alt="image" src="https://github.com/user-attachments/assets/248ed850-e7dc-40cf-be11-683ab1891a59" />
-<img width="1395" height="830" alt="image" src="https://github.com/user-attachments/assets/b823e8fc-833c-4cff-941b-7699746acd65" />
+<img width="1316" height="737" alt="image" src="https://github.com/user-attachments/assets/52b8047a-55cb-4238-8843-45f5359e8221" />
+<img width="1312" height="739" alt="image" src="https://github.com/user-attachments/assets/38fbac31-6749-4759-9e83-1255de48b2ab" />
 
 
 
